@@ -2,6 +2,7 @@ package com.ecommerce.microcommerce.web.controller;
 
 import com.ecommerce.microcommerce.dao.ProductDao;
 import com.ecommerce.microcommerce.model.Product;
+import com.ecommerce.microcommerce.web.exceptions.ProduitGratuitException;
 import com.ecommerce.microcommerce.web.exceptions.ProduitIntrouvableException;
 import com.fasterxml.jackson.databind.ser.FilterProvider;
 import com.fasterxml.jackson.databind.ser.impl.SimpleBeanPropertyFilter;
@@ -13,10 +14,14 @@ import org.springframework.http.ResponseEntity;
 import org.springframework.http.converter.json.MappingJacksonValue;
 import org.springframework.web.bind.annotation.*;
 import org.springframework.web.servlet.support.ServletUriComponentsBuilder;
+import java.util.Collections;
 
 import javax.validation.Valid;
 import java.net.URI;
+import java.util.Comparator;
 import java.util.List;
+import java.util.stream.Collectors;
+import java.util.stream.Stream;
 
 
 @Api( description="API pour es opérations CRUD sur les produits.")
@@ -30,7 +35,7 @@ public class ProductController {
 
     //Récupérer la liste des produits
 
-    @RequestMapping(value = "/Produits", method = RequestMethod.GET)
+    @GetMapping(value = "/Produits")
 
     public MappingJacksonValue listeProduits() {
 
@@ -102,7 +107,37 @@ public class ProductController {
 
         return productDao.chercherUnProduitCher(400);
     }
+    //Calcul de Marge
+    @GetMapping(value = "/AdminProduits")
+    public List<String> calculerMargeProduit() {
+        List<Product> product = productDao.findAll();
 
 
+        List<String> maListe = product.stream()
+                .peek(p -> {
+                    if(p.getPrix() == 0){
+                        throw new ProduitGratuitException("Le produit avec l'id " + p.getId() +
+                                " a un prix de vente à 0... t'as cru que j'étais ta pute ou quoi ?!! ");
+                    }
+                })
+                .map(p -> p.toString() + ":" + (p.getPrix() - p.getPrixAchat()))
+                .collect(Collectors.toList());
+
+
+        return maListe;
+    }
+
+
+    //Trier par ordre alpha
+    @GetMapping(value = "/Sort")
+    public List<Product> trierParOrdreAlphabetique() {
+        List<Product> product = productDao.findAll();
+        List<Product> filterSortedProducts =
+                product.stream()
+                        .sorted(Comparator.comparing(Product::getNom))
+                        // sort by name
+                        .collect(Collectors.toList());
+        return filterSortedProducts;
+    }
 
 }
